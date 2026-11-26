@@ -7,17 +7,21 @@
 
   const api = globalThis.browser ?? globalThis.chrome;
   const MIN = 0.1, MAX = 16;
-  const cfg = { watermark: true, hideAtNormal: false, shortcuts: true, step: 0.25 };
+  const cfg = { watermark: true, hideAtNormal: false, shortcuts: true, step: 0.25, remember: true, rate: 1 };
 
   const marks = new Map(); // video -> { host, label, flashUntil }
+  const loadedAt = new WeakMap(); // video -> when it last started loading or playing
+  const RESET_WINDOW_MS = 3000;
   let lastVideo = null;
   let rafId = 0;
   let tickId = 0;
 
-  api.storage.local.get(cfg).then((s) => { Object.assign(cfg, s); schedule(); });
+  api.storage.local.get(cfg).then((s) => { Object.assign(cfg, s); applyAll(); schedule(); });
   api.storage.onChanged.addListener((ch, area) => {
     if (area !== 'local') return;
     for (const k in ch) if (k in cfg) cfg[k] = ch[k].newValue;
+    // Speed changed in another tab or the popup: follow it here too.
+    if ('rate' in ch || 'remember' in ch) applyAll();
     schedule();
   });
 
@@ -38,7 +42,7 @@
       'text-shadow:0 1px 1px rgba(0,0,0,.6);user-select:none;white-space:nowrap}';
     const label = document.createElement('span');
     root.append(style, label);
-    m = { host, label, flashUntil: 0 };
+    m = { host, label, flashUntil: 0, volUntil: 0 };
     marks.set(video, m);
     ro.observe(video);
     return m;
@@ -46,6 +50,10 @@
 
   function fmt(rate) {
     return `${+rate.toFixed(2)}×`;
+  }
+
+  function fmtVol(v) {
+    return v.muted || v.volume === 0 ? '🔇 muted' : `🔊 ${Math.round(v.volume * 100)}%`;
   }
 
   function hostParent(video) {
@@ -80,7 +88,8 @@
     }
     const parent = hostParent(video);
     if (m.host.parentNode !== parent) parent.appendChild(m.host);
-    const text = fmt(rate);
+    // After a volume change, show the volume next to the speed for a moment.
+    const text = now < m.volUntil ? `${fmt(rate)} · ${fmtVol(video)}` : fmt(rate);
     if (m.label.textContent !== text) m.label.textContent = text;
     const x = Math.max(r.left, 0) + 10;
     const y = Math.max(r.top, 0) + 10;
@@ -111,9 +120,10 @@
     if (!rafId) rafId = requestAnimationFrame(updateAll);
   }
 
-  function track(video, flash) {
+  function track(video, flash, vol) {
     const m = getMark(video);
     if (flash) m.flashUntil = Date.now() + 1500;
+    if (vol) m.volUntil = m.flashUntil = Date.now() + 1500;
     schedule();
   }
 
@@ -121,13 +131,34 @@
   for (const type of ['play', 'playing', 'pause', 'ended', 'emptied', 'loadedmetadata']) {
     document.addEventListener(type, (e) => {
       if (e.target instanceof HTMLVideoElement) {
-        if (type === 'play' || type === 'playing') lastVideo = e.target;
-        track(e.target, false);
+        const v = e.target;
+        if (type === 'play' || type === 'playing') lastVideo = v;
+        // Only a new source counts as "just loaded"; a plain play/unpause must not undo a speed the person picks.
+        if (type === 'emptied' || type === 'loadedmetadata') loadedAt.set(v, Date.now());
+        if (type !== 'pause' && type !== 'ended') applyRemembered(v);
+        track(v, false);
       }
     }, true);
   }
+  document.addEventListener('loadstart', (e) => {
+    if (e.target instanceof HTMLVideoElement) loadedAt.set(e.target, Date.now());
+  }, true);
   document.addEventListener('ratechange', (e) => {
-    if (e.target instanceof HTMLVideoElement) track(e.target, true);
+    const v = e.target;
+    if (!(v instanceof HTMLVideoElement)) return;
+    if (cfg.remember && Math.abs(v.playbackRate - cfg.rate) > 0.001) {
+      if (Date.now() - (loadedAt.get(v) || 0) < RESET_WINDOW_MS) {
+        // The site reset the speed while loading the next video (YouTube does this): put it back.
+        applyRemembered(v);
+      } else if (v.playbackRate > 0) {
+        // The person changed it with the site's own menu: remember that choice instead.
+        saveRate(v.playbackRate);
+      }
+    }
+    track(v, true);
+  }, true);
+  document.addEventListener('volumechange', (e) => {
+    if (e.target instanceof HTMLVideoElement) track(e.target, false, true);
   }, true);
   addEventListener('scroll', schedule, { capture: true, passive: true });
   addEventListener('resize', schedule, { passive: true });
@@ -136,6 +167,23 @@
   // Videos that were already playing before the script loaded.
   for (const v of document.querySelectorAll('video')) {
     if (!v.paused) { lastVideo = v; track(v, false); }
+  }
+
+  // ---------- remember speed ----------
+  function applyRemembered(v) {
+    if (!cfg.remember) return;
+    const r = Number(cfg.rate) || 1;
+    if (Math.abs(v.playbackRate - r) > 0.001) v.playbackRate = r;
+  }
+
+  function applyAll() {
+    for (const v of document.querySelectorAll('video')) applyRemembered(v);
+  }
+
+  function saveRate(rate) {
+    if (!cfg.remember || cfg.rate === rate) return;
+    cfg.rate = rate;
+    api.storage.local.set({ rate });
   }
 
   // ---------- speed control ----------
@@ -152,9 +200,22 @@
 
   function setRate(video, rate) {
     rate = Math.min(MAX, Math.max(MIN, Math.round(rate * 100) / 100));
+    saveRate(rate);
     video.playbackRate = rate;
     track(video, true);
     return rate;
+  }
+
+  // ---------- volume ----------
+  const VOL_STEP = 0.1;
+  function nudgeVolume(video, delta) {
+    // Step from the real level even when muted, so unmuting a 50% video goes to 60%, not 10%.
+    const vol = Math.min(1, Math.max(0, Math.round((video.volume + delta) * 100) / 100));
+    if (delta > 0) video.muted = false; // turning it up should be heard, even on autoplay-muted videos
+    video.volume = vol;
+    if (vol === 0) video.muted = true;
+    track(video, false, true);
+    return vol;
   }
 
   function isTyping(el) {
@@ -166,14 +227,16 @@
 
   addEventListener('keydown', (e) => {
     if (!cfg.shortcuts || e.ctrlKey || e.altKey || e.metaKey) return;
-    if (e.key !== '[' && e.key !== ']' && e.key !== '\\') return;
+    if (!['[', ']', '\\', '(', ')'].includes(e.key)) return;
     if (isTyping(e.composedPath()[0])) return;
     const v = targetVideo();
     if (!v) return;
     const step = Number(cfg.step) || 0.25;
     if (e.key === ']') setRate(v, v.playbackRate + step);
     else if (e.key === '[') setRate(v, v.playbackRate - step);
-    else setRate(v, 1);
+    else if (e.key === '\\') setRate(v, 1);
+    else if (e.key === ')') nudgeVolume(v, VOL_STEP);
+    else nudgeVolume(v, -VOL_STEP);
     e.preventDefault();
     e.stopPropagation();
   }, true);
