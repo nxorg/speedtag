@@ -2,7 +2,7 @@
 
 Shows the current speed (e.g. `1.5×`) at the top-left of every playing video.
 
-- Keys: `[` slower, `]` faster, `\` reset to 1×, `(` quieter, `)` louder (10% steps; ignored while typing in a text box)
+- Keys: `[` slower, `]` faster, `\` reset to 1×, `9` quieter, `0` louder (10% steps; ignored while typing in a text box)
 - Remembers your speed: every next video (and every tab) starts at the speed you last chose. Turn off in the popup.
 - Toolbar popup: −/+ buttons, presets, and settings (watermark on/off, hide at 1×, shortcuts, step)
 - Light on CPU: it is event-driven, and its only timer runs once a second while a video plays

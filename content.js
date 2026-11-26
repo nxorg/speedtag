@@ -227,7 +227,7 @@
 
   addEventListener('keydown', (e) => {
     if (!cfg.shortcuts || e.ctrlKey || e.altKey || e.metaKey) return;
-    if (!['[', ']', '\\', '(', ')'].includes(e.key)) return;
+    if (!['[', ']', '\\', '9', '0'].includes(e.key)) return;
     if (isTyping(e.composedPath()[0])) return;
     const v = targetVideo();
     if (!v) return;
@@ -235,7 +235,7 @@
     if (e.key === ']') setRate(v, v.playbackRate + step);
     else if (e.key === '[') setRate(v, v.playbackRate - step);
     else if (e.key === '\\') setRate(v, 1);
-    else if (e.key === ')') nudgeVolume(v, VOL_STEP);
+    else if (e.key === '0') nudgeVolume(v, VOL_STEP);
     else nudgeVolume(v, -VOL_STEP);
     e.preventDefault();
     e.stopPropagation();
