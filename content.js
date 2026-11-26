@@ -218,6 +218,17 @@
     return vol;
   }
 
+  // Step to the next point on the step grid instead of adding the step blindly.
+  // From 0.1× with step 0.25: up → 0.25, 0.5, 0.75… (not 0.35, 0.6, 0.85…).
+  function stepRate(rate, delta) {
+    const step = Math.abs(delta) || 0.25;
+    const n = rate / step;
+    const next = delta > 0
+      ? (Math.floor(n + 1e-6) + 1) * step
+      : (Math.ceil(n - 1e-6) - 1) * step;
+    return Math.max(MIN, next);
+  }
+
   function isTyping(el) {
     if (!el) return false;
     if (el.isContentEditable) return true;
@@ -232,8 +243,8 @@
     const v = targetVideo();
     if (!v) return;
     const step = Number(cfg.step) || 0.25;
-    if (e.key === ']') setRate(v, v.playbackRate + step);
-    else if (e.key === '[') setRate(v, v.playbackRate - step);
+    if (e.key === ']') setRate(v, stepRate(v.playbackRate, step));
+    else if (e.key === '[') setRate(v, stepRate(v.playbackRate, -step));
     else if (e.key === '\\') setRate(v, 1);
     else if (e.key === '0') nudgeVolume(v, VOL_STEP);
     else nudgeVolume(v, -VOL_STEP);
@@ -246,7 +257,7 @@
     const v = targetVideo();
     if (!v) return;
     if (msg && msg.type === 'set') setRate(v, msg.rate);
-    else if (msg && msg.type === 'nudge') setRate(v, v.playbackRate + msg.delta);
+    else if (msg && msg.type === 'nudge') setRate(v, stepRate(v.playbackRate, msg.delta));
     return Promise.resolve({ rate: v.playbackRate });
   });
 })();
