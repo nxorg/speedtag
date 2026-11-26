@@ -1,0 +1,6 @@
+web-ext-artifacts/
+*.zip
+*.xpi
+.amo-credentials
+.env
+node_modules/

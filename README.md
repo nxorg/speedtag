@@ -1,0 +1,21 @@
+# nxorg Video Speed (Firefox extension)
+
+Shows the current speed (e.g. `1.5×`) at the top-left of every playing video.
+
+- Keys: `[` slower, `]` faster, `\` reset to 1× (ignored while typing in a text box)
+- Toolbar popup: −/+ buttons, presets, and settings (watermark on/off, hide at 1×, shortcuts, step)
+- Light on CPU: it is event-driven, and its only timer runs once a second while a video plays
+- Collects no data and needs only the `storage` permission
+
+## Test locally
+1. Firefox → `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…**
+2. Pick `manifest.json` in this folder.
+3. Play any video (YouTube, etc.) and press `]`.
+
+## Publish to addons.mozilla.org
+1. Build: `zip -r ../nxorg-video-speed-1.0.0.zip manifest.json content.js popup.html popup.js icons`
+2. Go to https://addons.mozilla.org/developers/ → **Submit a New Add-on** → "On this site" → upload the zip.
+3. Source code upload: answer **No** (nothing is minified or bundled).
+4. For each new version, bump `"version"` in `manifest.json` and rebuild the zip.
+
+Optional lint, the same checks AMO runs: `npx web-ext lint`

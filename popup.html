@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; --acc:#2f6fed; --bd:#d6d9de; --mut:#6b7280; }
+  @media (prefers-color-scheme: dark) { :root { --acc:#5b8dff; --bd:#3a3f48; --mut:#9aa0a6; } }
+  body { margin:0; width:260px; padding:14px; font:14px/1.4 system-ui,sans-serif; }
+  h1 { font-size:15px; margin:0 0 10px; }
+  .speed { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  #cur { font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  button { font:inherit; padding:5px 10px; border:1px solid var(--bd); border-radius:6px; background:transparent; color:inherit; cursor:pointer; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:var(--acc); border-color:var(--acc); color:#fff; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:10px 0 12px; }
+  label { display:flex; gap:8px; align-items:center; margin:6px 0; }
+  select { font:inherit; }
+  .mut { color:var(--mut); font-size:12px; margin-top:10px; }
+  kbd { border:1px solid var(--bd); border-radius:3px; padding:0 4px; font-size:11px; }
+</style>
+</head>
+<body>
+  <h1>nxorg Video Speed</h1>
+  <div class="speed">
+    <button id="down" title="Slower">−</button>
+    <span id="cur">–</span>
+    <button id="up" title="Faster">+</button>
+  </div>
+  <div class="grid" id="presets"></div>
+
+  <label><input type="checkbox" id="watermark"> Show speed watermark</label>
+  <label><input type="checkbox" id="hideAtNormal"> Hide watermark at 1×</label>
+  <label><input type="checkbox" id="shortcuts"> Keyboard shortcuts</label>
+  <label>Step
+    <select id="step">
+      <option value="0.1">0.1×</option>
+      <option value="0.25">0.25×</option>
+      <option value="0.5">0.5×</option>
+    </select>
+  </label>
+  <div class="mut"><kbd>[</kbd> slower · <kbd>]</kbd> faster · <kbd>\</kbd> reset to 1×</div>
+  <script src="popup.js"></script>
+</body>
+</html>
