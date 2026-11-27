@@ -7,7 +7,7 @@
 
   const api = globalThis.browser ?? globalThis.chrome;
   const MIN = 0.1, MAX = 16;
-  const cfg = { watermark: true, hideAtNormal: false, shortcuts: true, step: 0.25, remember: true, rate: 1 };
+  const cfg = { watermark: true, hideAtNormal: false, shortcuts: true, step: 0.25, remember: true, rate: 1, tagSize: 1, tagAuto: true };
 
   const marks = new Map(); // video -> { host, label, flashUntil }
   const loadedAt = new WeakMap(); // video -> when it last started loading or playing
@@ -37,12 +37,12 @@
     const root = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent =
-      'span{display:inline-block;font:600 13px/1 system-ui,-apple-system,"Segoe UI",sans-serif;' +
-      'color:#fff;background:rgba(0,0,0,.45);padding:4px 7px;border-radius:4px;' +
+      'span{display:inline-block;font:600 1em/1 system-ui,-apple-system,"Segoe UI",sans-serif;' +
+      'color:#fff;background:rgba(0,0,0,.45);padding:.3em .55em;border-radius:.3em;' +
       'text-shadow:0 1px 1px rgba(0,0,0,.6);user-select:none;white-space:nowrap}';
     const label = document.createElement('span');
     root.append(style, label);
-    m = { host, label, flashUntil: 0, volUntil: 0 };
+    m = { host, label, flashUntil: 0, volUntil: 0, px: 0 };
     marks.set(video, m);
     ro.observe(video);
     return m;
@@ -54,6 +54,13 @@
 
   function fmtVol(v) {
     return v.muted || v.volume === 0 ? '🔇 muted' : `🔊 ${Math.round(v.volume * 100)}%`;
+  }
+
+  // Text size in px. With "scale with video" on, it grows with the video's width:
+  // 13px at 640px wide, about 22px at 1920px, about 32px on a 4K fullscreen video.
+  function tagPx(r) {
+    const base = cfg.tagAuto ? 13 * Math.sqrt(Math.max(r.width, 320) / 640) : 13;
+    return Math.round(Math.min(72, Math.max(9, base * (Number(cfg.tagSize) || 1))));
   }
 
   function hostParent(video) {
@@ -91,8 +98,11 @@
     // After a volume change, show the volume next to the speed for a moment.
     const text = now < m.volUntil ? `${fmt(rate)} · ${fmtVol(video)}` : fmt(rate);
     if (m.label.textContent !== text) m.label.textContent = text;
-    const x = Math.max(r.left, 0) + 10;
-    const y = Math.max(r.top, 0) + 10;
+    const px = tagPx(r);
+    if (m.px !== px) { m.px = px; m.host.style.fontSize = px + 'px'; }
+    const gap = Math.round(px * 0.75);
+    const x = Math.max(r.left, 0) + gap;
+    const y = Math.max(r.top, 0) + gap;
     m.host.style.transform = `translate(${x}px,${y}px)`;
     m.host.style.display = 'block';
     return playing;
