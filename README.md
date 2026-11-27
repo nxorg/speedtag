@@ -1,6 +1,6 @@
 # SpeedTag – Video Speed & Volume Control (Firefox extension)
 
-Shows the current speed (e.g. `1.5×`) at the top-left of every playing video.
+Shows the current speed (e.g. `1.5`) at the top-left of every playing video.
 
 - Keys: `[` slower, `]` faster, `\` reset to 1×, `9` quieter, `0` louder (10% steps; ignored while typing in a text box)
 - Remembers your speed: every next video (and every tab) starts at the speed you last chose. Turn off in the popup.
@@ -15,7 +15,7 @@ Shows the current speed (e.g. `1.5×`) at the top-left of every playing video.
 3. Play any video (YouTube, etc.) and press `]`.
 
 ## Publish to addons.mozilla.org
-1. Build: `zip -r ../speedtag-1.2.0.zip manifest.json content.js popup.html popup.js icons`
+1. Build: `zip -r ../speedtag-1.2.1.zip manifest.json content.js popup.html popup.js icons`
 2. Go to https://addons.mozilla.org/developers/ → **Submit a New Add-on** → "On this site" → upload the zip.
 3. Source code upload: answer **No** (nothing is minified or bundled).
 4. For each new version, bump `"version"` in `manifest.json` and rebuild the zip.

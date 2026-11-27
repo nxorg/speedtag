@@ -49,7 +49,7 @@
   }
 
   function fmt(rate) {
-    return `${+rate.toFixed(2)}×`;
+    return `${+rate.toFixed(2)}`;
   }
 
   function fmtVol(v) {
