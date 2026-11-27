@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "nxorg Video Speed",
+  "name": "SpeedTag – Video Speed & Volume Control",
   "version": "1.1.0",
   "description": "Shows the current playback speed at the top-left of every playing video. Change speed with [ ] \\ and volume with 9 0 keys, or from the toolbar popup. Remembers your speed.",
   "icons": {
@@ -30,7 +30,7 @@
       "32": "icons/icon.svg",
       "48": "icons/icon-48.png"
     },
-    "default_title": "nxorg Video Speed"
+    "default_title": "SpeedTag"
   },
   "browser_specific_settings": {
     "gecko": {

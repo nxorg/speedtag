@@ -1,4 +1,4 @@
-// nxorg Video Speed: content script.
+// SpeedTag: content script.
 // Draws a small speed label at the top-left of each playing <video>.
 // Built to stay light on CPU: it is event-driven, with one 1s position check that runs only while a video plays.
 (() => {
