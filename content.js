@@ -276,10 +276,18 @@
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   }
 
+  // Sites like X use number keys for their own shortcuts (9 jumps to 90%), so this listener is
+  // registered at document_start, before the page's own, and stops the page from seeing our keys.
+  const KEYS = ['[', ']', '\\', '9', '0', '(', ')']; // ( and ) are Shift+9 and Shift+0
+  const handled = new Set(); // keys whose keydown we took, so we also hide their keypress/keyup
+  function block(e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
   addEventListener('keydown', (e) => {
     if (!cfg.shortcuts || e.ctrlKey || e.altKey || e.metaKey) return;
-    // ( and ) are Shift+9 and Shift+0: they change the volume too.
-    if (!['[', ']', '\\', '9', '0', '(', ')'].includes(e.key)) return;
+    if (!KEYS.includes(e.key)) return;
     if (isTyping(e.composedPath()[0])) return;
     const v = targetVideo();
     if (!v) return;
@@ -289,9 +297,11 @@
     else if (e.key === '\\') setRate(v, 1);
     else if (e.key === '0' || e.key === ')') nudgeVolume(v, VOL_STEP);
     else nudgeVolume(v, -VOL_STEP);
-    e.preventDefault();
-    e.stopPropagation();
+    handled.add(e.code);
+    block(e);
   }, true);
+  addEventListener('keypress', (e) => { if (handled.has(e.code)) block(e); }, true);
+  addEventListener('keyup', (e) => { if (handled.delete(e.code)) block(e); }, true);
 
   // Popup → page messages. Only frames that have a video reply.
   api.runtime.onMessage.addListener((msg) => {
