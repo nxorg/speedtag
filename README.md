@@ -15,7 +15,7 @@ Shows the current speed (e.g. `1.5`) at the top-left of every playing video.
 3. Play any video (YouTube, etc.) and press `]`.
 
 ## Publish to addons.mozilla.org
-1. Build: `zip -r ../speedtag-1.2.6.zip manifest.json content.js popup.html popup.js icons`
+1. Build: `zip -r ../speedtag-1.2.7.zip manifest.json content.js popup.html popup.js icons`
 2. Go to https://addons.mozilla.org/developers/ → **Submit a New Add-on** → "On this site" → upload the zip.
 3. Source code upload: answer **No** (nothing is minified or bundled).
 4. For each new version, bump `"version"` in `manifest.json` and rebuild the zip.
