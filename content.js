@@ -168,7 +168,17 @@
     track(v, true);
   }, true);
   document.addEventListener('volumechange', (e) => {
-    if (e.target instanceof HTMLVideoElement) track(e.target, false, true);
+    const v = e.target;
+    if (!(v instanceof HTMLVideoElement)) return;
+    // Some players (X, for one) mute or reset the video again right after a key press.
+    // Put the chosen level back once, so we never fight the site in a loop.
+    const w = wantVol.get(v);
+    if (w && !w.fixed && Date.now() < w.until &&
+        (v.muted !== w.muted || Math.abs(v.volume - w.volume) > 0.001)) {
+      w.fixed = true;
+      setTimeout(() => { v.volume = w.volume; v.muted = w.muted; }, 0);
+    }
+    track(v, false, true);
   }, true);
   addEventListener('scroll', schedule, { capture: true, passive: true });
   addEventListener('resize', schedule, { passive: true });
@@ -197,15 +207,33 @@
   }
 
   // ---------- speed control ----------
+  // How much of the video is on screen, in px².
+  function visibleArea(v) {
+    const r = v.getBoundingClientRect();
+    const w = Math.min(r.right, innerWidth) - Math.max(r.left, 0);
+    const h = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+    return w > 0 && h > 0 ? w * h : 0;
+  }
+
+  // The video the keys should control. Feeds like X autoplay many videos while you scroll,
+  // so "the last one that started" is often off screen: pick the one you are looking at.
   function targetVideo() {
-    if (lastVideo && lastVideo.isConnected) return lastVideo;
-    let best = null, bestArea = 0;
-    for (const v of document.querySelectorAll('video')) {
-      const r = v.getBoundingClientRect();
-      const area = r.width * r.height;
-      if (area > bestArea) { best = v; bestArea = area; }
+    const fs = document.fullscreenElement;
+    if (fs) {
+      const v = fs instanceof HTMLVideoElement ? fs : fs.querySelector('video');
+      if (v) return v;
     }
-    return best;
+    const playing = (v) => !v.paused && !v.ended;
+    if (lastVideo && lastVideo.isConnected && playing(lastVideo) && visibleArea(lastVideo) > 0) return lastVideo;
+    let best = null, bestScore = 0;
+    for (const v of document.querySelectorAll('video')) {
+      const area = visibleArea(v);
+      if (!area) continue;
+      const score = area * (playing(v) ? 4 : 1); // a playing video beats a bigger paused one
+      if (score > bestScore) { best = v; bestScore = score; }
+    }
+    if (best) return best;
+    return lastVideo && lastVideo.isConnected ? lastVideo : document.querySelector('video');
   }
 
   function setRate(video, rate) {
@@ -218,12 +246,14 @@
 
   // ---------- volume ----------
   const VOL_STEP = 0.1;
+  const wantVol = new WeakMap(); // video -> { volume, muted, until }: what the last key press set
   function nudgeVolume(video, delta) {
     // Step from the real level even when muted, so unmuting a 50% video goes to 60%, not 10%.
     const vol = Math.min(1, Math.max(0, Math.round((video.volume + delta) * 100) / 100));
     if (delta > 0) video.muted = false; // turning it up should be heard, even on autoplay-muted videos
     video.volume = vol;
     if (vol === 0) video.muted = true;
+    wantVol.set(video, { volume: vol, muted: video.muted, until: Date.now() + 600, fixed: false });
     track(video, false, true);
     return vol;
   }
