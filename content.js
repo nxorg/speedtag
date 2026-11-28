@@ -278,7 +278,8 @@
 
   addEventListener('keydown', (e) => {
     if (!cfg.shortcuts || e.ctrlKey || e.altKey || e.metaKey) return;
-    if (!['[', ']', '\\', '9', '0'].includes(e.key)) return;
+    // ( and ) are Shift+9 and Shift+0: they change the volume too.
+    if (!['[', ']', '\\', '9', '0', '(', ')'].includes(e.key)) return;
     if (isTyping(e.composedPath()[0])) return;
     const v = targetVideo();
     if (!v) return;
@@ -286,7 +287,7 @@
     if (e.key === ']') setRate(v, stepRate(v.playbackRate, step));
     else if (e.key === '[') setRate(v, stepRate(v.playbackRate, -step));
     else if (e.key === '\\') setRate(v, 1);
-    else if (e.key === '0') nudgeVolume(v, VOL_STEP);
+    else if (e.key === '0' || e.key === ')') nudgeVolume(v, VOL_STEP);
     else nudgeVolume(v, -VOL_STEP);
     e.preventDefault();
     e.stopPropagation();
